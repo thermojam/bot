@@ -1,30 +1,43 @@
+const express = require('express');
 const TelegramBot = require('node-telegram-bot-api');
-const express = require('express'); // 👈 Добавляем express
-const app = express();
 
+const TOKEN = process.env.TELEGRAM_TOKEN; // Безопасный способ хранения токена
+const URL = process.env.RENDER_EXTERNAL_URL || `https://bot-gupk.onrender.com`; // Укажи URL вручную при необходимости
+
+const bot = new TelegramBot(TOKEN);
+const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Простой роут, чтобы Render видел, что сервер работает
-app.get('/', (req, res) => {
-    res.send('Бот работает!');
+// Нужно для обработки JSON-запросов от Telegram
+app.use(express.json());
+
+// Установка вебхука
+bot.setWebHook(`${URL}/bot${TOKEN}`);
+
+// Telegram будет слать обновления сюда
+app.post(`/bot${TOKEN}`, (req, res) => {
+    bot.processUpdate(req.body);
+    res.sendStatus(200);
 });
 
-// Запуск сервера
+// Проверка, что сервер жив
+app.get('/', (req, res) => {
+    res.send('Бот работает через вебхук 🚀');
+});
+
 app.listen(PORT, () => {
     console.log(`Express-сервер запущен на порту ${PORT}`);
 });
 
-// ==== Telegram Bot ====
-// Используем переменную окружения для токена
-const TOKEN = process.env.TELEGRAM_TOKEN;  // Получаем токен из переменной окружения
-const bot = new TelegramBot(TOKEN, { polling: true });
+// ======== Telegram Logic ========
 
-let userData = {}; // Объект для хранения данных пользователя
+let userData = {};
 
-// Шаг 1: Приветствие
+// Старт
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
     const firstName = msg.from.first_name;
+
     userData[chatId] = {};
 
     const welcomeMessage = `Привет, ${firstName}! \nЯ Ксения — эксперт по славянской гимнастике.\n\n🔹 Хочешь получить бесплатный урок «3 упражнения для снятия усталости за 10 минут»?\n\nНажми кнопку ниже 👇`;
@@ -43,7 +56,7 @@ bot.onText(/\/start/, (msg) => {
     bot.sendMessage(chatId, welcomeMessage, options);
 });
 
-// Обработка всех callback_query
+// Обработка кнопок
 bot.on('callback_query', (callbackQuery) => {
     const chatId = callbackQuery.message.chat.id;
     const data = callbackQuery.data;
