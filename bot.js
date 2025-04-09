@@ -15,7 +15,8 @@ app.listen(PORT, () => {
 });
 
 // ==== Telegram Bot ====
-const TOKEN = '7702641383:AAEQDAFQs6u9bPSjNaVRirDGSAaL92hlY9U'; // Замените на ваш токен
+// Используем переменную окружения для токена
+const TOKEN = process.env.TELEGRAM_TOKEN;  // Получаем токен из переменной окружения
 const bot = new TelegramBot(TOKEN, { polling: true });
 
 let userData = {}; // Объект для хранения данных пользователя
