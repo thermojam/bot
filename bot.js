@@ -60,7 +60,10 @@ bot.on('callback_query', (callbackQuery) => {
     const chatId = callbackQuery.message.chat.id;
     const data = callbackQuery.data;
 
-    bot.answerCallbackQuery(callbackQuery.id);
+    bot.answerCallbackQuery(callbackQuery.id).catch((err) => {
+        console.error('Ошибка при answerCallbackQuery:', err.message);
+    });
+
 
     if (data === 'want_lesson') {
         const surveyMessage = `🎉 Отлично! Чтобы урок был полезным, ответь:\n\nЧто тебя беспокоит больше всего?`;
