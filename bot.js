@@ -154,4 +154,4 @@ function sendDailyBroadcast() {
 }
 
 // 🔁 Запускаем каждые 24 часа
-setInterval(sendDailyBroadcast, 10000);
+setInterval(sendDailyBroadcast, 86400000);
