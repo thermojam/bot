@@ -31,7 +31,6 @@ app.listen(PORT, () => {
 let userData = {};
 let subscribedUsers = new Set(); // для рассылки
 
-// 1️⃣ Приветствие и кнопки
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
     const firstName = msg.from.first_name;
@@ -40,7 +39,7 @@ bot.onText(/\/start/, (msg) => {
         userData[chatId] = {};
     }
 
-    subscribedUsers.add(chatId); // добавляем в список подписанных
+    subscribedUsers.add(chatId);
 
     const welcomeMessage = `
 👋 Привет, <b>${firstName}</b>!
@@ -67,7 +66,7 @@ bot.onText(/\/start/, (msg) => {
     bot.sendMessage(chatId, welcomeMessage, options);
 });
 
-// 2️⃣ Callback обработка
+
 bot.on('callback_query', (callbackQuery) => {
     const chatId = callbackQuery.message.chat.id;
     const data = callbackQuery.data;
@@ -85,7 +84,7 @@ bot.on('callback_query', (callbackQuery) => {
             reply_markup: {
                 inline_keyboard: [
                     [
-                        { text: '💔 Боли в спине', callback_data: 'back_pain' },
+                        { text: '💔 Боли в душе', callback_data: 'back_pain' },
                         { text: '⚡ Нет энергии', callback_data: 'no_energy' }
                     ],
                     [
@@ -133,7 +132,7 @@ P.S. Хочешь получить полный курс с моей подде�
 ✨ <b>Как тебе упражнения?</b>
 
 Хочешь:
-✅ Избавиться от болей в спине
+✅ Избавиться от болей в душе
 ✅ Вернуть энергию и лёгкость
 ✅ Работать в группе с моей поддержкой
 
@@ -145,7 +144,7 @@ P.S. Хочешь получить полный курс с моей подде�
     }
 });
 
-// 3️⃣ Авторассылка каждые 24 часа
+
 cron.schedule('0 9 * * *', () => {
     subscribedUsers.forEach((chatId) => {
         bot.sendMessage(chatId, `
