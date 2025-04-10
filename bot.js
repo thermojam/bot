@@ -3,24 +3,22 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const app = express();
 
+// === Настройки окружения ===
 const TOKEN = process.env.TELEGRAM_TOKEN;
-const bot = new TelegramBot(TOKEN);
-
 const URL = process.env.RENDER_EXTERNAL_URL || 'https://bot-gupk.onrender.com';
 const PORT = process.env.PORT || 3000;
 
-app.use(bodyParser.json());
-
-// Установка Webhook
+const bot = new TelegramBot(TOKEN);
 bot.setWebHook(`${URL}/bot${TOKEN}`);
 
-// Webhook endpoint
+// === Подключение express ===
+app.use(bodyParser.json());
+
 app.post(`/bot${TOKEN}`, (req, res) => {
     bot.processUpdate(req.body);
     res.sendStatus(200);
 });
 
-// Проверка, что сервер работает
 app.get('/', (req, res) => {
     res.send('🤖 Бот работает!');
 });
@@ -29,18 +27,20 @@ app.listen(PORT, () => {
     console.log(`Express-сервер запущен на порту ${PORT}`);
 });
 
-// ====== Логика бота ======
-
+// === Логика бота ===
 let userData = {};
-let subscribedChats = new Set(); // для рассылки
+const subscribedChats = new Set();
 
-// 1. Приветствие и выбор
+// Команда /start
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
-    const firstName = msg.from.first_name;
 
-    userData[chatId] = {};
-    subscribedChats.add(chatId); // добавляем в рассылку
+    // Предотвращение дублирующих сообщений
+    if (userData[chatId]?.started) return;
+
+    const firstName = msg.from.first_name;
+    userData[chatId] = { started: true };
+    subscribedChats.add(chatId); // Подписываем на рассылку
 
     const welcomeMessage = `Привет, ${firstName}! \nЯ Ксения — эксперт по славянской гимнастике.\n\n🔹 Хочешь получить бесплатный урок «3 упражнения для снятия усталости за 10 минут»?\n\nНажми кнопку ниже 👇`;
 
@@ -58,7 +58,14 @@ bot.onText(/\/start/, (msg) => {
     bot.sendMessage(chatId, welcomeMessage, options);
 });
 
-// 2. Обработка callback'ов
+// Команда /reset
+bot.onText(/\/reset/, (msg) => {
+    const chatId = msg.chat.id;
+    userData[chatId] = { started: false };
+    bot.sendMessage(chatId, '🔄 Диалог сброшен. Напиши /start, чтобы начать сначала.');
+});
+
+// Обработка нажатий кнопок
 bot.on('callback_query', (callbackQuery) => {
     const chatId = callbackQuery.message.chat.id;
     const data = callbackQuery.data;
@@ -68,14 +75,13 @@ bot.on('callback_query', (callbackQuery) => {
     });
 
     if (data === 'want_lesson') {
-        // Мини-опрос
         const surveyMessage = `🎉 Отлично! Чтобы урок был полезным, ответь:\n\nЧто тебя беспокоит больше всего?`;
 
         const options = {
             reply_markup: {
                 inline_keyboard: [
                     [
-                        { text: '💔 Боли в душе', callback_data: 'back_pain' },
+                        { text: '💔 Боли в спине', callback_data: 'back_pain' },
                         { text: '⚡ Нет энергии', callback_data: 'no_energy' },
                         { text: '😟 Стресс', callback_data: 'stress' }
                     ]
@@ -84,26 +90,16 @@ bot.on('callback_query', (callbackQuery) => {
         };
 
         bot.sendMessage(chatId, surveyMessage, options);
-
     } else if (data === 'no_lesson') {
-        // Отказ
-        bot.sendMessage(chatId, 'Хорошо! Если передумаешь — напиши «/start» 😊');
-
+        bot.sendMessage(chatId, 'Хорошо! Если передумаешь — пиши «Старт» 😊');
     } else if (['back_pain', 'no_energy', 'stress'].includes(data)) {
-        // Сохраняем ответ
         userData[chatId].concern = data;
 
-        // Урок
-        const lessonMessage = `🎬 Вот твой бесплатный урок! 
-
-🔹 [Просмотреть видео](https://www.youtube.com/watch?v=zmxPXaeEXBU)
-
-Попробуй прямо сейчас! А после напиши, как ощущения 😊
-
-P.S. Если хочешь получить полный курс с обратной связью, жми кнопку «Хочу курс!» после урока.`;
+        const lessonMessage = `🎬 Вот твой бесплатный урок!\n\n🔹 *3 упражнения для снятия усталости*\n\n[📺 Просмотреть видео](https://www.youtube.com/watch?v=IT94xC35u6k)\n\nПопробуй прямо сейчас! А после напиши, как ощущения 😊\n\nP.S. Если хочешь получить полный курс с обратной связью — жми кнопку ниже!`;
 
         const options = {
             parse_mode: 'Markdown',
+            disable_web_page_preview: false,
             reply_markup: {
                 inline_keyboard: [
                     [
@@ -114,44 +110,16 @@ P.S. Если хочешь получить полный курс с обрат�
         };
 
         bot.sendMessage(chatId, lessonMessage, options);
-
     } else if (data === 'want_course') {
-        const saleMessage = `✨ *Как тебе упражнения?* 😊
-
-Если хочешь:
-✅ Избавиться от болей в душе,
-✅ Вернуть энергию и лёгкость,
-✅ Работать в группе с моей поддержкой —
-
-*Стартует курс «Славянская гимнастика: 5 шагов к здоровью»!*`;
+        const saleMessage = `✨ *Как тебе упражнения?* 😊\n\nЕсли хочешь:\n✅ Избавиться от болей в спине *насовсем*,\n✅ Вернуть энергию и лёгкость,\n✅ Работать в группе с моей поддержкой —\n\n*Стартует курс «Славянская гимнастика: 5 шагов к здоровью»!*`;
 
         bot.sendMessage(chatId, saleMessage, { parse_mode: 'Markdown' });
     }
 });
 
-// ====== Рассылка ======
-
-function sendDailyBroadcast() {
-    const message = `🌟 Не пропусти полезные советы и практики!
-
-Подписывайся на мой Telegram-канал, чтобы получать регулярную поддержку 🙌`;
-
-    const options = {
-        reply_markup: {
-            inline_keyboard: [
-                [
-                    { text: '🔔 Перейти в канал', url: 'https://t.me/ksenia_kmensky' } // ← Укажи ссылку на канал
-                ]
-            ]
-        }
-    };
-
+// === Рассылка каждые 24 часа ===
+setInterval(() => {
     subscribedChats.forEach((chatId) => {
-        bot.sendMessage(chatId, message, options).catch((err) => {
-            console.error(`Ошибка при отправке в чат ${chatId}:`, err.message);
-        });
+        bot.sendMessage(chatId, '📢 Подпишись на наш Telegram-канал, чтобы не пропускать полезные материалы!\n\n👉 https://t.me/ksenia_kmensky');
     });
-}
-
-// 🔁 Запускаем каждые 24 часа
-setInterval(sendDailyBroadcast, 86400000);
+}, 24 * 60 * 60 * 1000);
