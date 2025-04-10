@@ -3,36 +3,30 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const app = express();
 
-const TOKEN = process.env.TELEGRAM_TOKEN; // 🔐 Безопасное хранение токена
+const TOKEN = process.env.TELEGRAM_TOKEN;
 const bot = new TelegramBot(TOKEN);
 
-// Используем вебхук вместо polling
-const URL = process.env.RENDER_EXTERNAL_URL || 'https://bot-gupk.onrender.com'; // Твой URL Render
+const URL = process.env.RENDER_EXTERNAL_URL || 'https://bot-gupk.onrender.com';
 const PORT = process.env.PORT || 3000;
 
-// Парсинг JSON тела запроса
 app.use(bodyParser.json());
 
-// Регистрируем вебхук
 bot.setWebHook(`${URL}/bot${TOKEN}`);
 
-// Обработка входящих обновлений
 app.post(`/bot${TOKEN}`, (req, res) => {
     bot.processUpdate(req.body);
     res.sendStatus(200);
 });
 
-// Роут для проверки статуса
 app.get('/', (req, res) => {
-    res.send('🤖 Бот запущен и работает!');
+    res.send('🤖 Бот работает!');
 });
 
 app.listen(PORT, () => {
-    console.log(`Express-сервер запущен на порту ${PORT}`);
+    console.log(`Express-сервер ${PORT}`);
 });
 
-// === Логика бота ===
-
+//Логика бота
 let userData = {};
 
 bot.onText(/\/start/, (msg) => {
@@ -100,7 +94,7 @@ bot.on('callback_query', (callbackQuery) => {
 
         bot.sendMessage(chatId, lessonMessage, options);
     } else if (data === 'want_course') {
-        const saleMessage = `✨ *Как тебе упражнения?* 😊\n\nЕсли хочешь:\n✅ Избавиться от болей в спине *насовсем*,\n✅ Вернуть энергию и лёгкость,\n✅ Работать в группе с моей поддержкой —\n\n*Стартует курс «Славянская гимнастика: 5 шагов к здоровью»!*`;
+        const saleMessage = `✨ Как тебе упражнения?* 😊\n\nЕсли хочешь:\n✅ Избавиться от болей в спине насовсем,\n✅ Вернуть энергию и лёгкость,\n✅ Работать в группе с моей поддержкой —\n\nСтартует курс «Славянская гимнастика: 5 шагов к здоровью»!`;
 
         bot.sendMessage(chatId, saleMessage, { parse_mode: 'Markdown' });
     }
