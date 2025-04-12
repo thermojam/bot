@@ -121,4 +121,4 @@ function sendDailyBroadcast() {
     });
 }
 
-setInterval(sendDailyBroadcast, 3 * 60 * 60 * 1000);
+setInterval(sendDailyBroadcast, 6 * 60 * 60 * 1000);
