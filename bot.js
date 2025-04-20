@@ -44,10 +44,10 @@ bot.onText(/\/start/, (msg) => {
             inline_keyboard: [
                 [
                     { text: '🧠 Психология 🟣', callback_data: 'psychology' },
-                    { text: '🧘 Славянская гимнастика 🟢', callback_data: 'gymnastics' }
+                    { text: '🧘 Гимнастика 🔵', callback_data: 'gymnastics' }
                 ],
                 [
-                    { text: '🥗 Нутрициология 🔵', callback_data: 'nutrition' }
+                    { text: '🥗 Нутрициология 🟢', callback_data: 'nutrition' }
                 ]
             ]
         }
@@ -109,7 +109,7 @@ function sendDailyBroadcast() {
     const options = {
         reply_markup: {
             inline_keyboard: [
-                [{ text: '🔔 Перейти в канал', url: 'https://t.me/xenia_kamensky' }]
+                [{ text: '🔔 Перейти в канал', url: 'https://t.me/ksenia_kmensky' }]
             ]
         }
     };
