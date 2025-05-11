@@ -20,7 +20,23 @@ app.post(`/bot${TOKEN}`, (req, res) => {
 });
 
 app.get('/', (req, res) => {
-    res.send('🤖 Бот работает!');
+    res.send(`
+<!DOCTYPE html>
+<html lang="en">
+        <head>
+        <meta charset="UTF-8">
+        <title>Stripe Server</title>
+        <link rel="icon" type="image/x-icon" href="/telegram.svg">
+        </head>
+        <body style="min-width: 100vh; background-color: #282828;">
+            <div style="text-align: center; padding: 180px 0 300px 0; font-family: sans-serif;">
+                <h1 style="color: white">TG-Bot <span style="color: #39ccff">Server is running</span> successfully!</h1>
+                <img src="/telegram.svg" alt="Node.js" width="200" style="margin-top: 20px;" />
+             </div>
+        </body>
+</html>
+    `
+    );
 });
 
 app.listen(PORT, () => {
@@ -41,15 +57,10 @@ bot.onText(/\/start/, (msg) => {
 
     const options = {
         reply_markup: {
-            inline_keyboard: [
-                [
-                    { text: '🧠 Психология 🟣', callback_data: 'psychology' },
-                    { text: '🧘 Гимнастика 🔵', callback_data: 'gymnastics' }
-                ],
-                [
-                    { text: '🥗 Нутрициология 🟢', callback_data: 'nutrition' }
-                ]
-            ]
+            inline_keyboard: [[{text: '🧠 Психология 🟣', callback_data: 'psychology'}, {
+                text: '🧘 Гимнастика 🔵',
+                callback_data: 'gymnastics'
+            }], [{text: '🥗 Нутрициология 🟢', callback_data: 'nutrition'}]]
         }
     };
 
@@ -64,7 +75,7 @@ bot.on('callback_query', (callbackQuery) => {
     if (data === 'want_course') {
         const saleMessage = `✨ *Запишись на курс!*\n\nТы сделала первый шаг. Готова углубиться в знания?\n\n🔹 Уникальная программа\n🔹 Обратная связь от Ксении\n🔹 Поддержка и сообщество`;
 
-        return bot.sendMessage(chatId, saleMessage, { parse_mode: 'Markdown' });
+        return bot.sendMessage(chatId, saleMessage, {parse_mode: 'Markdown'});
     }
 
     // Тематические ветки
@@ -89,11 +100,8 @@ bot.on('callback_query', (callbackQuery) => {
     const lessonMessage = `${messageText}\n\n👉 [Просмотреть видео](${lessonLink})`;
 
     const options = {
-        parse_mode: 'Markdown',
-        reply_markup: {
-            inline_keyboard: [
-                [{ text: '📚 Хочу курс!', callback_data: 'want_course' }]
-            ]
+        parse_mode: 'Markdown', reply_markup: {
+            inline_keyboard: [[{text: '📚 Хочу курс!', callback_data: 'want_course'}]]
         }
     };
 
@@ -108,9 +116,7 @@ function sendDailyBroadcast() {
 
     const options = {
         reply_markup: {
-            inline_keyboard: [
-                [{ text: '🔔 Перейти в канал', url: 'https://t.me/ksenia_kmensky' }]
-            ]
+            inline_keyboard: [[{text: '🔔 Перейти в канал', url: 'https://t.me/ksenia_kmensky'}]]
         }
     };
 
@@ -121,4 +127,4 @@ function sendDailyBroadcast() {
     });
 }
 
-setInterval(sendDailyBroadcast, 6 * 60 * 60 * 1000);
+setInterval(sendDailyBroadcast, 12 * 60 * 60 * 1000);
