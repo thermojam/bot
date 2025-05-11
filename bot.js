@@ -25,13 +25,13 @@ app.get('/', (req, res) => {
 <html lang="en">
         <head>
         <meta charset="UTF-8">
-        <title>Stripe Server</title>
+        <title>TG-Bot</title>
         <link rel="icon" type="image/x-icon" href="/telegram.svg">
         </head>
         <body style="min-width: 100vh; background-color: #282828;">
             <div style="text-align: center; padding: 180px 0 300px 0; font-family: sans-serif;">
                 <h1 style="color: white">TG-Bot <span style="color: #39ccff">Server is running</span> successfully!</h1>
-                <img src="/telegram.svg" alt="Node.js" width="200" style="margin-top: 20px;" />
+                <img src="/telegram.svg" alt="telegram" width="200" style="margin-top: 20px;" />
              </div>
         </body>
 </html>
@@ -40,7 +40,7 @@ app.get('/', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`Express-сервер запущен на порту ${PORT}`);
+    console.log(`Peace for all ${PORT}`);
 });
 
 // === Хранилище подписчиков ===
