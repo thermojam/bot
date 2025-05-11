@@ -19,6 +19,8 @@ app.post(`/bot${TOKEN}`, (req, res) => {
     res.sendStatus(200);
 });
 
+app.use(express.static('public'));
+
 app.get('/', (req, res) => {
     res.send(`
 <!DOCTYPE html>
