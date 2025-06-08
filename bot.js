@@ -18,7 +18,6 @@ if (!admin.apps.length) {
         credential: admin.credential.cert(FIREBASE_SERVICE_KEY),
     });
 }
-const db = admin.firestore();
 
 // === Bot Init ===
 const bot = new TelegramBot(TOKEN);
