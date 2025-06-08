@@ -1,8 +1,10 @@
+import db from './firebase.js';
+
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const express = require('express');
 const bodyParser = require('body-parser');
-const db = require('./firebase');
+
 
 const app = express();
 const TOKEN = process.env.TELEGRAM_TOKEN;

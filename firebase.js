@@ -1,9 +1,5 @@
-export function collection(users) {
-
-}
-
-const admin = require('firebase-admin');
-const serviceAccount = require('./firebaseServiceKey.json');
+import admin from 'firebase-admin';
+import serviceAccount from './firebaseServiceKey.json' assert { type: 'json' };
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
@@ -11,4 +7,4 @@ admin.initializeApp({
 
 const db = admin.firestore();
 
-module.exports = db;
+export default db;
