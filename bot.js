@@ -1,32 +1,45 @@
-import db from './firebase.js';
+import express from 'express';
+import bodyParser from 'body-parser';
+import { config } from 'dotenv';
+import TelegramBot from 'node-telegram-bot-api';
 
-require('dotenv').config();
-const TelegramBot = require('node-telegram-bot-api');
-const express = require('express');
-const bodyParser = require('body-parser');
+import db, { admin } from './firebase.js'; // 🔥 Импорт Firestore и admin
 
+config();
 
-const app = express();
 const TOKEN = process.env.TELEGRAM_TOKEN;
 const URL = process.env.RENDER_EXTERNAL_URL;
 const PORT = process.env.PORT || 3000;
 const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID;
 
+// === Firebase ===
+if (!admin.apps.length) {
+    admin.initializeApp({
+        credential: admin.credential.cert(FIREBASE_SERVICE_KEY),
+    });
+}
+const db = admin.firestore();
+
+// === Bot Init ===
 const bot = new TelegramBot(TOKEN);
 bot.setWebHook(`${URL}/bot${TOKEN}`);
 
+const app = express();
 app.use(bodyParser.json());
+app.use(express.static('public'));
 
+// === Webhook Route ===
 app.post(`/bot${TOKEN}`, (req, res) => {
     bot.processUpdate(req.body);
     res.sendStatus(200);
 });
 
-app.use(express.static('public'));
+// === Homepage Route ===
 app.get('/', (req, res) => {
     res.send(`<h1 style="color:white; text-align:center; background:#282828; padding:100px">Bot is running!</h1>`);
 });
 
+// === Start Server ===
 app.listen(PORT, () => console.log(`Bot running on port ${PORT}`));
 
 // === Firestore Utils ===
@@ -38,11 +51,11 @@ const updateUserStep = async (chatId, step) => {
             name: null,
             startedAt: new Date(),
             isSubscribed: null,
-            steps: [step]
+            steps: [step],
         });
     } else {
         await ref.update({
-            steps: admin.firestore.FieldValue.arrayUnion(step)
+            steps: admin.firestore.FieldValue.arrayUnion(step),
         });
     }
 };
@@ -65,7 +78,7 @@ const logAction = (chatId, action) => {
     bot.sendMessage(ADMIN_CHAT_ID, msg).catch(() => {});
 };
 
-// === Dialog ===
+// === Bot Dialog ===
 bot.onText(/\/start/, async (msg) => {
     const chatId = msg.chat.id;
     const firstName = msg.from.first_name;
@@ -78,13 +91,14 @@ bot.onText(/\/start/, async (msg) => {
 
     const options = {
         reply_markup: {
-            inline_keyboard: [[
-                { text: '🧠 Психология 🟣', callback_data: 'psychology' },
-                { text: '🧘 Гимнастика 🔵', callback_data: 'gymnastics' }
-            ], [
-                { text: '🥗 Нутрициология 🟢', callback_data: 'nutrition' }
-            ]]
-        }
+            inline_keyboard: [
+                [
+                    { text: '🧠 Психология 🟣', callback_data: 'psychology' },
+                    { text: '🧘 Гимнастика 🔵', callback_data: 'gymnastics' },
+                ],
+                [{ text: '🥗 Нутрициология 🟢', callback_data: 'nutrition' }],
+            ],
+        },
     };
 
     bot.sendMessage(chatId, welcomeMessage, options);
@@ -118,30 +132,32 @@ bot.on('callback_query', async (query) => {
     logAction(chatId, `Нажал кнопку: ${data}`);
 
     if (data === 'want_course') {
-        return bot.sendMessage(chatId, `✨ *Запишись на курс!*\n\n🔹 Уникальная программа\n🔹 Обратная связь от Ксении\n🔹 Поддержка и сообщество`, {
-            parse_mode: 'Markdown'
-        });
+        return bot.sendMessage(
+            chatId,
+            `✨ *Запишись на курс!*\n\n🔹 Уникальная программа\n🔹 Обратная связь от Ксении\n🔹 Поддержка и сообщество`,
+            { parse_mode: 'Markdown' }
+        );
     }
 
     const lessonLinks = {
         psychology: 'https://www.youtube.com/watch?v=iLlrIi9-NfQ',
         gymnastics: 'https://www.youtube.com/watch?v=-wqLcfcA_ig',
-        nutrition: 'https://www.youtube.com/watch?v=-e-4Kx5px_I'
+        nutrition: 'https://www.youtube.com/watch?v=-e-4Kx5px_I',
     };
 
     const messages = {
         psychology: '🧠 *Психология*\n\nВот видеоурок, который поможет тебе разобраться в себе и обрести внутренний баланс.',
         gymnastics: '🧘 *Славянская гимнастика*\n\nПопробуй древние практики для здоровья и женственности.',
-        nutrition: '🥗 *Нутрициология*\n\nНаучись питаться осознанно и чувствовать себя лучше каждый день.'
+        nutrition: '🥗 *Нутрициология*\n\nНаучись питаться осознанно и чувствовать себя лучше каждый день.',
     };
 
     const msg = `${messages[data]}\n\n👉 [Просмотреть видео](${lessonLinks[data]})`;
 
-    await setSubscriptionStatus(chatId, true); // Упрощенно: всегда пропускаем
+    await setSubscriptionStatus(chatId, true);
     bot.sendMessage(chatId, msg, {
         parse_mode: 'Markdown',
         reply_markup: {
-            inline_keyboard: [[{ text: '📚 Хочу курс!', callback_data: 'want_course' }]]
-        }
+            inline_keyboard: [[{ text: '📚 Хочу курс!', callback_data: 'want_course' }]],
+        },
     });
 });
