@@ -1,17 +1,18 @@
 {
-  "name": "project",
-  "version": "1.0.0",
-  "description": "",
-  "main": "bot.js",
-  "scripts": {
-    "start": "node bot.js"
-  },
-  "keywords": [],
-  "author": "Nikita Mensky",
-  "license": "ISC",
-  "dependencies": {
-    "body-parser": "^2.2.0",
-    "express": "^5.1.0",
-    "node-telegram-bot-api": "^0.66.0"
-  }
+    "name": "project",
+    "version": "1.0.0",
+    "description": "",
+    "main": "bot.js",
+    "scripts": {
+        "start": "node bot.js"
+    },
+    "keywords": [],
+    "author": "Nikita Mensky",
+    "license": "ISC",
+    "dependencies": {
+        "body-parser": "^2.2.0",
+        "dotenv": "^16.5.0",
+        "express": "^5.1.0",
+        "node-telegram-bot-api": "^0.63.0"
+    }
 }

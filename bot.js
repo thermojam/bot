@@ -1,19 +1,24 @@
+require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const express = require('express');
 const bodyParser = require('body-parser');
+
 const app = express();
 
-// === Конфигурация ===
 const TOKEN = process.env.TELEGRAM_TOKEN;
-const URL = process.env.RENDER_EXTERNAL_URL || 'https://bot-gupk.onrender.com';
+const URL = process.env.RENDER_EXTERNAL_URL || 'https://bot.onrender.com';
 const PORT = process.env.PORT || 3000;
+const ADMIN_CHAT_ID = Number(process.env.ADMIN_CHAT_ID); // Преобразуем в число
+
+if (!TOKEN || !ADMIN_CHAT_ID) {
+    throw new Error('❌ TELEGRAM_TOKEN или ADMIN_CHAT_ID не заданы в .env');
+}
 
 const bot = new TelegramBot(TOKEN);
-bot.setWebHook(`${URL}/bot${TOKEN}`);
+bot.setWebHook(`${URL}/bot${TOKEN}`); // IDE может предупреждать, но это корректно
 
 app.use(bodyParser.json());
 
-// === Вебхук ===
 app.post(`/bot${TOKEN}`, (req, res) => {
     bot.processUpdate(req.body);
     res.sendStatus(200);
@@ -21,66 +26,119 @@ app.post(`/bot${TOKEN}`, (req, res) => {
 
 app.use(express.static('public'));
 
-app.get('/', (req, res) => {
-    res.send(`
-<!DOCTYPE html>
-<html lang="en">
-        <head>
-        <meta charset="UTF-8">
-        <title>TG-Bot</title>
-        <link rel="icon" type="image/x-icon" href="/telegram.svg">
-        </head>
-        <body style="min-width: 100vh; background-color: #282828;">
-            <div style="text-align: center; padding: 180px 0 300px 0; font-family: sans-serif;">
-                <h1 style="color: white">TG-Bot <span style="color: #39ccff">Server is running</span> successfully!</h1>
-                <img src="/telegram.svg" alt="telegram" width="200" style="margin-top: 20px;" />
-             </div>
-        </body>
-</html>
-    `
-    );
+app.get('/', (_req, res) => {
+    res.send(`<h1 style="color:white; text-align:center; background:#282828; padding:100px">Bot is running!</h1>`);
 });
 
 app.listen(PORT, () => {
-    console.log(`Peace for all ${PORT}`);
+    console.log(`🚀 Bot is live on port ${PORT}`);
 });
 
-// === Хранилище подписчиков ===
-const subscribedChats = new Set();
+const userStats = {};
 
-// === Старт ===
+function updateStats(chatId, key) {
+    if (!userStats[chatId]) {
+        userStats[chatId] = {
+            steps: [],
+            startedAt: new Date(),
+            isSubscribed: null,
+            name: null
+        };
+    }
+    userStats[chatId].steps.push(key);
+}
+
+function updateSubscription(chatId, isSubscribed) {
+    if (userStats[chatId]) {
+        userStats[chatId].isSubscribed = isSubscribed;
+    }
+}
+
+function setName(chatId, name) {
+    if (userStats[chatId]) {
+        userStats[chatId].name = name;
+    }
+}
+
+function logAction(chatId, action) {
+    const msg = `📝 ${chatId}: ${action}`;
+    bot.sendMessage(ADMIN_CHAT_ID, msg).catch(() => {});
+}
+
+async function isUserSubscribed(chatId, userId) {
+    try {
+        const res = await bot.getChatMember('@ksenia_kmensky', userId);
+        return res.status !== 'left' && res.status !== 'kicked';
+    } catch (e) {
+        console.error(`❌ Ошибка подписки (${chatId}):`, e.message);
+        return false;
+    }
+}
+
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
     const firstName = msg.from.first_name;
 
-    subscribedChats.add(chatId);
+    updateStats(chatId, 'start');
+    setName(chatId, firstName);
+    logAction(chatId, `Стартовал бот. Имя: ${firstName}`);
 
     const welcomeMessage = `Привет, ${firstName}! 👋\n\nЯ Ксения — эксперт по здоровью и балансу.\n\nХочешь получить бесплатный видеоурок?\n\nВыбери, что тебе ближе 👇`;
 
     const options = {
         reply_markup: {
-            inline_keyboard: [[{text: '🧠 Психология 🟣', callback_data: 'psychology'}, {
-                text: '🧘 Гимнастика 🔵',
-                callback_data: 'gymnastics'
-            }], [{text: '🥗 Нутрициология 🟢', callback_data: 'nutrition'}]]
+            inline_keyboard: [
+                [
+                    { text: '🧠 Психология 🟣', callback_data: 'psychology' },
+                    { text: '🧘 Гимнастика 🔵', callback_data: 'gymnastics' }
+                ],
+                [
+                    { text: '🥗 Нутрициология 🟢', callback_data: 'nutrition' }
+                ]
+            ]
         }
     };
 
     bot.sendMessage(chatId, welcomeMessage, options);
 });
 
-// === Обработка выбора ===
-bot.on('callback_query', (callbackQuery) => {
+// === /stats только для админа ===
+bot.onText(/\/stats/, (msg) => {
+    const chatId = msg.chat.id;
+    if (chatId !== ADMIN_CHAT_ID) return;
+
+    if (Object.keys(userStats).length === 0) {
+        return bot.sendMessage(chatId, '📭 Статистика пуста');
+    }
+
+    let report = '📊 Статистика пользователей:\n\n';
+
+    for (const [id, user] of Object.entries(userStats)) {
+        report += `👤 ${user.name || 'Без имени'} (${id})\n`;
+        report += `⏰ С начала: ${user.startedAt.toLocaleString()}\n`;
+        report += `🧾 Действия: ${user.steps.join(', ')}\n`;
+        report += `🔔 Подписка: ${user.isSubscribed === null ? 'неизвестно' : user.isSubscribed ? '✅' : '❌'}\n\n`;
+    }
+
+    bot.sendMessage(chatId, report);
+});
+
+// === Обработка кнопок ===
+bot.on('callback_query', async (callbackQuery) => {
     const chatId = callbackQuery.message.chat.id;
     const data = callbackQuery.data;
+    const userId = callbackQuery.from.id;
+    const userName = callbackQuery.from.first_name;
+
+    updateStats(chatId, data);
+    setName(chatId, userName);
+    logAction(chatId, `Нажал кнопку: ${data}`);
 
     if (data === 'want_course') {
         const saleMessage = `✨ *Запишись на курс!*\n\nТы сделала первый шаг. Готова углубиться в знания?\n\n🔹 Уникальная программа\n🔹 Обратная связь от Ксении\n🔹 Поддержка и сообщество`;
-
-        return bot.sendMessage(chatId, saleMessage, {parse_mode: 'Markdown'});
+        return bot.sendMessage(chatId, saleMessage, { parse_mode: 'Markdown' });
     }
 
-    // Тематические ветки
     let messageText = '';
     let lessonLink = '';
 
@@ -99,34 +157,31 @@ bot.on('callback_query', (callbackQuery) => {
             break;
     }
 
+    const subscribed = await isUserSubscribed(chatId, userId);
+    updateSubscription(chatId, subscribed);
+    logAction(chatId, `Подписан на канал: ${subscribed}`);
+
+    if (!subscribed) {
+        return bot.sendMessage(chatId, `🚫 Чтобы получить доступ к материалу, подпишись на канал.`, {
+            reply_markup: {
+                inline_keyboard: [
+                    [{ text: '🔔 Перейти в канал', url: 'https://t.me/ksenia_kmensky' }],
+                    [{ text: '✅ Я подписался', callback_data: data }]
+                ]
+            }
+        });
+    }
+
     const lessonMessage = `${messageText}\n\n👉 [Просмотреть видео](${lessonLink})`;
 
     const options = {
-        parse_mode: 'Markdown', reply_markup: {
-            inline_keyboard: [[{text: '📚 Хочу курс!', callback_data: 'want_course'}]]
+        parse_mode: 'Markdown',
+        reply_markup: {
+            inline_keyboard: [
+                [{ text: '📚 Хочу курс!', callback_data: 'want_course' }]
+            ]
         }
     };
 
     bot.sendMessage(chatId, lessonMessage, options);
 });
-
-
-function sendDailyBroadcast() {
-    const message = `🌟 Не пропусти полезные советы и практики!
-
-Подписывайся на мой Telegram-канал, чтобы получать регулярную поддержку 🙌`;
-
-    const options = {
-        reply_markup: {
-            inline_keyboard: [[{text: '🔔 Перейти в канал', url: 'https://t.me/ksenia_kmensky'}]]
-        }
-    };
-
-    subscribedChats.forEach((chatId) => {
-        bot.sendMessage(chatId, message, options).catch((err) => {
-            console.error(`Ошибка при отправке в чат ${chatId}:`, err.message);
-        });
-    });
-}
-
-setInterval(sendDailyBroadcast, 12 * 60 * 60 * 1000);
