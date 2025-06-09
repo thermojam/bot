@@ -3,7 +3,7 @@ import bodyParser from 'body-parser';
 import { config } from 'dotenv';
 import TelegramBot from 'node-telegram-bot-api';
 
-import db, { admin } from './firebase.js'; // 🔥 Импорт Firestore и admin
+import db, { admin } from './firebase.js';
 
 config();
 
@@ -11,6 +11,7 @@ const TOKEN = process.env.TELEGRAM_TOKEN;
 const URL = process.env.RENDER_EXTERNAL_URL;
 const PORT = process.env.PORT || 3000;
 const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID;
+const CHANNEL_USERNAME = process.env.CHANNEL_USERNAME; // 👈 Добавлено
 
 // === Firebase ===
 if (!admin.apps.length) {
@@ -72,11 +73,6 @@ const getAllUserStats = async () => {
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 };
 
-const logAction = (chatId, action) => {
-    const msg = `📝 ${chatId}: ${action}`;
-    bot.sendMessage(ADMIN_CHAT_ID, msg).catch(() => {});
-};
-
 // === Bot Dialog ===
 bot.onText(/\/start/, async (msg) => {
     const chatId = msg.chat.id;
@@ -84,7 +80,6 @@ bot.onText(/\/start/, async (msg) => {
 
     await updateUserStep(chatId, 'start');
     await setUserName(chatId, firstName);
-    logAction(chatId, `Start: ${firstName}`);
 
     const welcomeMessage = `Привет, ${firstName}! 👋\n\nЯ Ксения — эксперт по здоровью и балансу.\n\nХочешь получить бесплатный видеоурок?\n\nВыбери, что тебе ближе 👇`;
 
@@ -128,7 +123,31 @@ bot.on('callback_query', async (query) => {
 
     await updateUserStep(chatId, data);
     await setUserName(chatId, name);
-    logAction(chatId, `Нажал кнопку: ${data}`);
+
+    // === Проверка подписки ===
+    try {
+        const member = await bot.getChatMember(CHANNEL_USERNAME, chatId);
+        const isSubscribed = ['member', 'creator', 'administrator'].includes(member.status);
+        await setSubscriptionStatus(chatId, isSubscribed);
+
+        if (!isSubscribed) {
+            return bot.sendMessage(chatId,
+                `🔒 Чтобы получить доступ к видеоуроку, пожалуйста, подпишись на канал ${CHANNEL_USERNAME}\n\n` +
+                `После подписки нажми повторно на кнопку.`,
+                {
+                    reply_markup: {
+                        inline_keyboard: [
+                            [{ text: '📲 Подписаться', url: `https://t.me/${CHANNEL_USERNAME.replace('@', '')}` }],
+                            [{ text: '🔄 Проверить подписку', callback_data: data }]
+                        ]
+                    }
+                }
+            );
+        }
+    } catch (error) {
+        console.error('Ошибка при проверке подписки:', error);
+        return bot.sendMessage(chatId, '🚫 Произошла ошибка при проверке подписки. Попробуй позже.');
+    }
 
     if (data === 'want_course') {
         return bot.sendMessage(
@@ -152,7 +171,6 @@ bot.on('callback_query', async (query) => {
 
     const msg = `${messages[data]}\n\n👉 [Просмотреть видео](${lessonLinks[data]})`;
 
-    await setSubscriptionStatus(chatId, true);
     bot.sendMessage(chatId, msg, {
         parse_mode: 'Markdown',
         reply_markup: {
