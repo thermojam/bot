@@ -125,7 +125,6 @@ bot.on('callback_query', async (query) => {
     await updateUserStep(chatId, data);
     await setUserName(chatId, name);
 
-    // === Проверка подписки ===
     try {
         const channelUsername = `@${process.env.CHANNEL_USERNAME.replace('@', '')}`;
         const member = await bot.getChatMember(channelUsername, userId);
@@ -152,13 +151,34 @@ bot.on('callback_query', async (query) => {
     }
 
     if (data === 'want_course') {
+        await updateUserStep(chatId, 'want_course');
+
         return bot.sendMessage(
             chatId,
-            `✨ *Запишись на курс!*\n\n🔹 Уникальная программа\n🔹 Обратная связь от Ксении\n🔹 Поддержка и сообщество`,
-            {parse_mode: 'Markdown'}
+            `✨ *Запишись на курс!*\n\n🔹 Уникальная программа\n🔹 Обратная связь от Ксении\n🔹 Поддержка и сообщество\n\n💳 Стоимость: *990₽*`,
+            {
+                parse_mode: 'Markdown',
+                reply_markup: {
+                    inline_keyboard: [
+                        [{ text: '💸 Оплатить курс', callback_data: 'mock_payment' }],
+                    ],
+                },
+            }
         );
     }
 
+    if (data === 'mock_payment') {
+        await updateUserStep(chatId, 'mock_payment');
+
+        bot.sendMessage(chatId, '💳 Начинаем "оплату"... ⏳');
+
+        setTimeout(() => {
+            bot.sendMessage(chatId, '✅ Оплата прошла успешно! 🎉 Доступ открыт.');
+            bot.sendMessage(chatId, '📦 Вот ссылка на курс: https://web.telegram.org/k/#-2689228807');
+        }, 2000);
+
+        return;
+    }
 
     const lessonLinks = {
         psychology: 'https://www.youtube.com/watch?v=iLlrIi9-NfQ',
