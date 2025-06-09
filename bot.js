@@ -98,24 +98,6 @@ bot.onText(/\/start/, async (msg) => {
     bot.sendMessage(chatId, welcomeMessage, options);
 });
 
-bot.onText(/\/stats/, async (msg) => {
-    const chatId = msg.chat.id;
-    if (chatId.toString() !== ADMIN_CHAT_ID) return;
-
-    const users = await getAllUserStats();
-    if (!users.length) return bot.sendMessage(chatId, '📭 Статистика пуста');
-
-    let report = '📊 Статистика пользователей:\n\n';
-    users.forEach(user => {
-        report += `👤 ${user.name || 'Без имени'} (${user.id})\n`;
-        report += `⏰ С начала: ${new Date(user.startedAt._seconds * 1000).toLocaleString()}\n`;
-        report += `🧾 Действия: ${user.steps?.join(', ') || 'нет'}\n`;
-        report += `🔔 Подписка: ${user.isSubscribed === true ? '✅' : '❌'}\n\n`;
-    });
-
-    bot.sendMessage(chatId, report);
-});
-
 bot.on('callback_query', async (query) => {
     const chatId = query.message.chat.id;
     const data = query.data;
@@ -155,7 +137,7 @@ bot.on('callback_query', async (query) => {
 
         return bot.sendMessage(
             chatId,
-            `✨ *Запишись на курс!*\n\n🔹 Уникальная программа\n🔹 Обратная связь от Ксении\n🔹 Поддержка и сообщество\n\n💳 Стоимость: *990₽*`,
+            `✨ *Запишись на курс!*\n\n🔹 Уникальная программа с лучшими практиками\n🔹 Обратная связь от Ксении Каменской\n🔹 Поддержка и сообщество единомышлеников\n\n💳 Стоимость: *39900₽*`,
             {
                 parse_mode: 'Markdown',
                 reply_markup: {
@@ -174,7 +156,7 @@ bot.on('callback_query', async (query) => {
 
         setTimeout(() => {
             bot.sendMessage(chatId, '✅ Оплата прошла успешно! 🎉 Доступ открыт.');
-            bot.sendMessage(chatId, '📦 Вот ссылка на курс: https://web.telegram.org/k/#-2689228807');
+            bot.sendMessage(chatId, '📦 Вот ссылка на курс: https://t.me/ksenia_kmensky');
         }, 2000);
 
         return;
