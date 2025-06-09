@@ -1,9 +1,9 @@
 import express from 'express';
 import bodyParser from 'body-parser';
-import { config } from 'dotenv';
+import {config} from 'dotenv';
 import TelegramBot from 'node-telegram-bot-api';
 
-import db, { admin } from './firebase.js';
+import db, {admin} from './firebase.js';
 
 config();
 
@@ -61,16 +61,16 @@ const updateUserStep = async (chatId, step) => {
 };
 
 const setUserName = async (chatId, name) => {
-    await db.collection('users').doc(String(chatId)).update({ name });
+    await db.collection('users').doc(String(chatId)).update({name});
 };
 
 const setSubscriptionStatus = async (chatId, status) => {
-    await db.collection('users').doc(String(chatId)).update({ isSubscribed: status });
+    await db.collection('users').doc(String(chatId)).update({isSubscribed: status});
 };
 
 const getAllUserStats = async () => {
     const snapshot = await db.collection('users').get();
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
 };
 
 // === Bot Dialog ===
@@ -87,10 +87,10 @@ bot.onText(/\/start/, async (msg) => {
         reply_markup: {
             inline_keyboard: [
                 [
-                    { text: '🧠 Психология 🟣', callback_data: 'psychology' },
-                    { text: '🧘 Гимнастика 🔵', callback_data: 'gymnastics' },
+                    {text: '🧠 Психология 🟣', callback_data: 'psychology'},
+                    {text: '🧘 Гимнастика 🔵', callback_data: 'gymnastics'},
                 ],
-                [{ text: '🥗 Нутрициология 🟢', callback_data: 'nutrition' }],
+                [{text: '🥗 Нутрициология 🟢', callback_data: 'nutrition'}],
             ],
         },
     };
@@ -120,25 +120,27 @@ bot.on('callback_query', async (query) => {
     const chatId = query.message.chat.id;
     const data = query.data;
     const name = query.from.first_name;
+    const userId = query.from.id;
 
     await updateUserStep(chatId, data);
     await setUserName(chatId, name);
 
     // === Проверка подписки ===
     try {
-        const member = await bot.getChatMember(CHANNEL_USERNAME, chatId);
+        const channelUsername = `@${process.env.CHANNEL_USERNAME.replace('@', '')}`;
+        const member = await bot.getChatMember(channelUsername, userId);
         const isSubscribed = ['member', 'creator', 'administrator'].includes(member.status);
         await setSubscriptionStatus(chatId, isSubscribed);
 
         if (!isSubscribed) {
             return bot.sendMessage(chatId,
-                `🔒 Чтобы получить доступ к видеоуроку, пожалуйста, подпишись на канал ${CHANNEL_USERNAME}\n\n` +
+                `🔒 Чтобы получить доступ к видеоуроку, пожалуйста, подпишись на канал ${channelUsername}\n\n` +
                 `После подписки нажми повторно на кнопку.`,
                 {
                     reply_markup: {
                         inline_keyboard: [
-                            [{ text: '📲 Подписаться', url: `https://t.me/${CHANNEL_USERNAME.replace('@', '')}` }],
-                            [{ text: '🔄 Проверить подписку', callback_data: data }]
+                            [{text: '📲 Подписаться', url: `https://t.me/${channelUsername.replace('@', '')}`}],
+                            [{text: '🔄 Проверить подписку', callback_data: data}]
                         ]
                     }
                 }
@@ -153,9 +155,10 @@ bot.on('callback_query', async (query) => {
         return bot.sendMessage(
             chatId,
             `✨ *Запишись на курс!*\n\n🔹 Уникальная программа\n🔹 Обратная связь от Ксении\n🔹 Поддержка и сообщество`,
-            { parse_mode: 'Markdown' }
+            {parse_mode: 'Markdown'}
         );
     }
+
 
     const lessonLinks = {
         psychology: 'https://www.youtube.com/watch?v=iLlrIi9-NfQ',
@@ -174,7 +177,7 @@ bot.on('callback_query', async (query) => {
     bot.sendMessage(chatId, msg, {
         parse_mode: 'Markdown',
         reply_markup: {
-            inline_keyboard: [[{ text: '📚 Хочу курс!', callback_data: 'want_course' }]],
+            inline_keyboard: [[{text: '📚 Хочу курс!', callback_data: 'want_course'}]],
         },
     });
 });
