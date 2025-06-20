@@ -1,12 +1,14 @@
 import admin from 'firebase-admin';
 
-const FIREBASE_SERVICE_KEY = JSON.parse(process.env.FIREBASE_SERVICE_KEY);
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_KEY);
 
-admin.initializeApp({
-    credential: admin.credential.cert(FIREBASE_SERVICE_KEY),
-});
+if (!admin.apps.length) {
+    admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+    });
+}
 
 const db = admin.firestore();
 
-export { admin };
 export default db;
+export { admin };
