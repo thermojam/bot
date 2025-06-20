@@ -145,6 +145,7 @@ bot.on('callback_query', async (query) => {
                 confirmation: {
                     type: 'redirect',
                     return_url: 'https://t.me/xenia_kamensky',
+                    description: 'После оплаты нажмите "Вернуться на сайт" — и перейдите на страницу автора курса для уточнения дальнейших действий!',
                 },
                 capture: true,
                 description: 'Курс от Ксении',
