@@ -1,9 +1,9 @@
 import express from 'express';
 import bodyParser from 'body-parser';
-import {config} from 'dotenv';
+import { config } from 'dotenv';
 import TelegramBot from 'node-telegram-bot-api';
-
-import db, {admin} from './firebase.js';
+import db, { admin } from './firebase.js';
+import setupPayments from './payments.js';
 
 config();
 
@@ -11,16 +11,14 @@ const TOKEN = process.env.TELEGRAM_TOKEN;
 const URL = process.env.RENDER_EXTERNAL_URL;
 const PORT = process.env.PORT || 3000;
 const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID;
-const CHANNEL_USERNAME = process.env.CHANNEL_USERNAME; // 👈 Добавлено
+const CHANNEL_USERNAME = process.env.CHANNEL_USERNAME;
 
-// === Firebase ===
 if (!admin.apps.length) {
     admin.initializeApp({
         credential: admin.credential.cert(FIREBASE_SERVICE_KEY),
     });
 }
 
-// === Bot Init ===
 const bot = new TelegramBot(TOKEN);
 bot.setWebHook(`${URL}/bot${TOKEN}`);
 
@@ -28,21 +26,17 @@ const app = express();
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
-// === Webhook Route ===
 app.post(`/bot${TOKEN}`, (req, res) => {
     bot.processUpdate(req.body);
     res.sendStatus(200);
 });
 
-// === Homepage Route ===
 app.get('/', (req, res) => {
-    res.send(`<h1 style="color:white; text-align:center; background:#282828; padding:100px">Bot is running!</h1>`);
+    res.send(`<h1 style="color:#27ff8c; text-align:center; background:#282828; padding:100px">Bot is running!</h1>`);
 });
 
-// === Start Server ===
 app.listen(PORT, () => console.log(`Bot running on port ${PORT}`));
 
-// === Firestore Utils ===
 const updateUserStep = async (chatId, step) => {
     const ref = db.collection('users').doc(String(chatId));
     const doc = await ref.get();
@@ -61,19 +55,15 @@ const updateUserStep = async (chatId, step) => {
 };
 
 const setUserName = async (chatId, name) => {
-    await db.collection('users').doc(String(chatId)).update({name});
+    await db.collection('users').doc(String(chatId)).update({ name });
 };
 
 const setSubscriptionStatus = async (chatId, status) => {
-    await db.collection('users').doc(String(chatId)).update({isSubscribed: status});
+    await db.collection('users').doc(String(chatId)).update({ isSubscribed: status });
 };
 
-const getAllUserStats = async () => {
-    const snapshot = await db.collection('users').get();
-    return snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
-};
+setupPayments(bot, updateUserStep);
 
-// === Bot Dialog ===
 bot.onText(/\/start/, async (msg) => {
     const chatId = msg.chat.id;
     const firstName = msg.from.first_name;
@@ -87,10 +77,10 @@ bot.onText(/\/start/, async (msg) => {
         reply_markup: {
             inline_keyboard: [
                 [
-                    {text: '🧠 Психология 🟣', callback_data: 'psychology'},
-                    {text: '🧘 Гимнастика 🔵', callback_data: 'gymnastics'},
+                    { text: '🧠 Психология 🟣', callback_data: 'psychology' },
+                    { text: '🧘 Гимнастика 🔵', callback_data: 'gymnastics' },
                 ],
-                [{text: '🥗 Нутрициология 🟢', callback_data: 'nutrition'}],
+                [{ text: '🥗 Нутрициология 🟢', callback_data: 'nutrition' }],
             ],
         },
     };
@@ -108,20 +98,20 @@ bot.on('callback_query', async (query) => {
     await setUserName(chatId, name);
 
     try {
-        const channelUsername = `@${process.env.CHANNEL_USERNAME.replace('@', '')}`;
+        const channelUsername = `@${CHANNEL_USERNAME.replace('@', '')}`;
         const member = await bot.getChatMember(channelUsername, userId);
         const isSubscribed = ['member', 'creator', 'administrator'].includes(member.status);
         await setSubscriptionStatus(chatId, isSubscribed);
 
         if (!isSubscribed) {
             return bot.sendMessage(chatId,
-                `🔒 Чтобы получить доступ к видеоуроку, пожалуйста, подпишись на канал ${channelUsername}\n\n` +
+                `🔒 Чтобы получить доступ к видеоуроку, подпишись на канал ${channelUsername}\n\n` +
                 `После подписки нажми повторно на кнопку.`,
                 {
                     reply_markup: {
                         inline_keyboard: [
-                            [{text: '📲 Подписаться', url: `https://t.me/${channelUsername.replace('@', '')}`}],
-                            [{text: '🔄 Проверить подписку', callback_data: data}]
+                            [{ text: '📲 Подписаться', url: `https://t.me/${channelUsername.replace('@', '')}` }],
+                            [{ text: '🔄 Проверить подписку', callback_data: data }]
                         ]
                     }
                 }
@@ -129,37 +119,21 @@ bot.on('callback_query', async (query) => {
         }
     } catch (error) {
         console.error('Ошибка при проверке подписки:', error);
-        return bot.sendMessage(chatId, '🚫 Произошла ошибка при проверке подписки. Попробуй позже.');
+        return bot.sendMessage(chatId, '🚫 Ошибка при проверке подписки. Попробуй позже.');
     }
 
     if (data === 'want_course') {
         await updateUserStep(chatId, 'want_course');
-
         return bot.sendMessage(
             chatId,
-            `✨ *Запишись на курс!*\n\n🔹 Уникальная программа с лучшими практиками\n🔹 Обратная связь от Ксении Каменской\n🔹 Поддержка и сообщество единомышлеников\n\n💳 Стоимость: *39900₽*`,
+            `✨ *Запишись на курс!*\n\n🔹 Уникальная программа\n🔹 Обратная связь от Ксении\n🔹 Поддержка и сообщество\n\n💳 Стоимость: *39900₽*`,
             {
                 parse_mode: 'Markdown',
                 reply_markup: {
-                    inline_keyboard: [
-                        [{ text: '💸 Оплатить курс', callback_data: 'mock_payment' }],
-                    ],
+                    inline_keyboard: [[{ text: '💸 Оплатить курс', callback_data: 'buy_course' }]],
                 },
             }
         );
-    }
-
-    if (data === 'mock_payment') {
-        await updateUserStep(chatId, 'mock_payment');
-
-        bot.sendMessage(chatId, '💳 Начинаем "оплату"... ⏳');
-
-        setTimeout(() => {
-            bot.sendMessage(chatId, '✅ Оплата прошла успешно! 🎉 Доступ открыт.');
-            bot.sendMessage(chatId, '📦 Вот ссылка на курс: https://t.me/ksenia_kmensky');
-        }, 2000);
-
-        return;
     }
 
     const lessonLinks = {
@@ -179,7 +153,7 @@ bot.on('callback_query', async (query) => {
     bot.sendMessage(chatId, msg, {
         parse_mode: 'Markdown',
         reply_markup: {
-            inline_keyboard: [[{text: '📚 Хочу курс!', callback_data: 'want_course'}]],
+            inline_keyboard: [[{ text: '📚 Хочу курс!', callback_data: 'want_course' }]],
         },
     });
 });
