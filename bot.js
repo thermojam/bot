@@ -33,7 +33,7 @@ app.post(`/bot${TOKEN}`, (req, res) => {
 });
 
 app.get('/', (req, res) => {
-    res.send(`<h1 style="color:#27ff8c; text-align:center; background:#282828; padding:100px">Bot is running!</h1>`);
+    res.send(`<h1 style="color:#27ff8c; text-align:center; padding:300px; font-family: Nunito, sans-serif; font-size: 36px">Bot is running!</h1>`);
 });
 
 app.listen(PORT, () => console.log(`Bot running on port ${PORT}`));
@@ -129,7 +129,7 @@ bot.on('callback_query', async (query) => {
             {
                 parse_mode: 'Markdown',
                 reply_markup: {
-                    inline_keyboard: [[{ text: '💸 Перейти к оплате', callback_data: 'buy_course' }]],
+                    inline_keyboard: [[{ text: '💸 Оплатить курс', callback_data: 'buy_course' }]],
                 },
             }
         );
