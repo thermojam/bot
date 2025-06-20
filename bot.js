@@ -144,7 +144,7 @@ bot.on('callback_query', async (query) => {
                 },
                 confirmation: {
                     type: 'redirect',
-                    return_url: `https://t.me/${BOT_USERNAME}`,
+                    return_url: 'https://t.me/ksenia_kmensky',
                 },
                 capture: true,
                 description: 'Курс от Ксении',
@@ -154,7 +154,13 @@ bot.on('callback_query', async (query) => {
             });
 
             await updateUserStep(chatId, 'payment_created');
-            bot.sendMessage(chatId, `💳 Перейди по ссылке для оплаты: ${payment.confirmation.confirmation_url}`);
+            bot.sendMessage(chatId, '💳 Нажми на кнопку ниже для оплаты курса:', {
+                reply_markup: {
+                    inline_keyboard: [
+                        [{ text: '🔐 Перейти к оплате', url: payment.confirmation.confirmation_url }],
+                    ]
+                }
+            });
         } catch (error) {
             console.error('Ошибка при создании платежа:', error);
             bot.sendMessage(chatId, '❌ Не удалось создать платёж. Попробуйте позже.');
