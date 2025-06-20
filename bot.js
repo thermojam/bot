@@ -3,7 +3,7 @@ import bodyParser from 'body-parser';
 import { config } from 'dotenv';
 import TelegramBot from 'node-telegram-bot-api';
 import db, { admin } from './firebase.js';
-import setupPayments from './payments.js';
+import yookassa from './yookassa.js';
 
 config();
 
@@ -11,6 +11,7 @@ const TOKEN = process.env.TELEGRAM_TOKEN;
 const URL = process.env.RENDER_EXTERNAL_URL;
 const PORT = process.env.PORT || 3000;
 const CHANNEL_USERNAME = process.env.CHANNEL_USERNAME;
+const BOT_USERNAME = process.env.BOT_USERNAME;
 
 const FIREBASE_SERVICE_KEY = JSON.parse(process.env.FIREBASE_SERVICE_KEY);
 if (!admin.apps.length) {
@@ -61,8 +62,6 @@ const setUserName = async (chatId, name) => {
 const setSubscriptionStatus = async (chatId, status) => {
     await db.collection('users').doc(String(chatId)).update({ isSubscribed: status });
 };
-
-setupPayments(bot, updateUserStep);
 
 bot.onText(/\/start/, async (msg) => {
     const chatId = msg.chat.id;
@@ -130,10 +129,36 @@ bot.on('callback_query', async (query) => {
             {
                 parse_mode: 'Markdown',
                 reply_markup: {
-                    inline_keyboard: [[{ text: '💸 Оплатить курс', callback_data: 'buy_course' }]],
+                    inline_keyboard: [[{ text: '💸 Перейти к оплате', callback_data: 'buy_course' }]],
                 },
             }
         );
+    }
+
+    if (data === 'buy_course') {
+        try {
+            const payment = await yookassa.createPayment({
+                amount: {
+                    value: '39900.00',
+                    currency: 'RUB',
+                },
+                confirmation: {
+                    type: 'redirect',
+                    return_url: `https://t.me/${BOT_USERNAME}`,
+                },
+                capture: true,
+                description: 'Курс от Ксении',
+                metadata: {
+                    telegram_chat_id: chatId
+                }
+            });
+
+            await updateUserStep(chatId, 'payment_created');
+            bot.sendMessage(chatId, `💳 Перейди по ссылке для оплаты: ${payment.confirmation.confirmation_url}`);
+        } catch (error) {
+            console.error('Ошибка при создании платежа:', error);
+            bot.sendMessage(chatId, '❌ Не удалось создать платёж. Попробуйте позже.');
+        }
     }
 
     const lessonLinks = {
@@ -148,12 +173,13 @@ bot.on('callback_query', async (query) => {
         nutrition: '🥗 *Нутрициология*\n\nНаучись питаться осознанно и чувствовать себя лучше каждый день.',
     };
 
-    const msg = `${messages[data]}\n\n👉 [Просмотреть видео](${lessonLinks[data]})`;
-
-    bot.sendMessage(chatId, msg, {
-        parse_mode: 'Markdown',
-        reply_markup: {
-            inline_keyboard: [[{ text: '📚 Хочу курс!', callback_data: 'want_course' }]],
-        },
-    });
+    if (messages[data]) {
+        const msg = `${messages[data]}\n\n👉 [Просмотреть видео](${lessonLinks[data]})`;
+        bot.sendMessage(chatId, msg, {
+            parse_mode: 'Markdown',
+            reply_markup: {
+                inline_keyboard: [[{ text: '📚 Хочу курс!', callback_data: 'want_course' }]],
+            },
+        });
+    }
 });
