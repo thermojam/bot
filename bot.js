@@ -144,7 +144,7 @@ bot.on('callback_query', async (query) => {
                 },
                 confirmation: {
                     type: 'redirect',
-                    return_url: 'https://t.me/ksenia_kmensky',
+                    return_url: 'https://t.me/xenia_kamensky',
                 },
                 capture: true,
                 description: 'Курс от Ксении',
