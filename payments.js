@@ -6,18 +6,18 @@ export default function setupPayments(bot, updateUserStep) {
         const chatId = query.message.chat.id;
         const data = query.data;
 
-        if (data === 'mock_payment') {
+        if (data === 'buy_course') {
             const invoice = {
                 chat_id: chatId,
                 title: 'Курс от Ксении',
-                description: 'Доступ к курсу и сообществу. С обратной связью от Ксении.',
-                payload: 'course-payload',
+                description: 'Доступ к курсу, материалам и чату поддержки.',
+                payload: 'course_payload_test',
                 provider_token: process.env.PROVIDER_TOKEN,
+                start_parameter: 'pay_course',
                 currency: 'RUB',
                 prices: [
-                    { label: 'Курс', amount: 3990000 } // 39900.00 RUB
+                    { label: 'Курс', amount: 3990000 }, // 39900.00 руб
                 ],
-                start_parameter: 'pay_course'
             };
 
             try {
@@ -32,9 +32,9 @@ export default function setupPayments(bot, updateUserStep) {
                     invoice.prices
                 );
                 await updateUserStep(chatId, 'invoice_sent');
-            } catch (err) {
-                console.error('Ошибка отправки счёта:', err);
-                await bot.sendMessage(chatId, '❌ Не удалось отправить счёт. Попробуйте позже.');
+            } catch (error) {
+                console.error('Ошибка отправки счёта:', error);
+                await bot.sendMessage(chatId, '❌ Не удалось создать платёж. Попробуйте позже.');
             }
         }
     });
@@ -45,8 +45,8 @@ export default function setupPayments(bot, updateUserStep) {
 
     bot.on('successful_payment', async (msg) => {
         const chatId = msg.chat.id;
-        await updateUserStep(chatId, 'successful_payment');
-        await bot.sendMessage(chatId, '✅ Оплата прошла успешно! 🎉 Доступ открыт.');
-        await bot.sendMessage(chatId, '📦 Вот ссылка на курс: https://t.me/ksenia_kmensky');
+        await updateUserStep(chatId, 'payment_success');
+        await bot.sendMessage(chatId, '✅ Оплата прошла успешно! Доступ открыт.');
+        await bot.sendMessage(chatId, '📦 Ссылка на курс: https://t.me/ksenia_kmensky');
     });
 }

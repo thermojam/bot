@@ -1,8 +1,8 @@
 import express from 'express';
 import bodyParser from 'body-parser';
-import { config } from 'dotenv';
+import {config} from 'dotenv';
 import TelegramBot from 'node-telegram-bot-api';
-import db, { admin } from './firebase.js';
+import db, {admin} from './firebase.js';
 import setupPayments from './payments.js';
 
 config();
@@ -10,8 +10,8 @@ config();
 const TOKEN = process.env.TELEGRAM_TOKEN;
 const URL = process.env.RENDER_EXTERNAL_URL;
 const PORT = process.env.PORT || 3000;
-const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID;
 const CHANNEL_USERNAME = process.env.CHANNEL_USERNAME;
+const FIREBASE_SERVICE_KEY = JSON.parse(process.env.FIREBASE_SERVICE_KEY);
 
 if (!admin.apps.length) {
     admin.initializeApp({
@@ -55,11 +55,11 @@ const updateUserStep = async (chatId, step) => {
 };
 
 const setUserName = async (chatId, name) => {
-    await db.collection('users').doc(String(chatId)).update({ name });
+    await db.collection('users').doc(String(chatId)).update({name});
 };
 
 const setSubscriptionStatus = async (chatId, status) => {
-    await db.collection('users').doc(String(chatId)).update({ isSubscribed: status });
+    await db.collection('users').doc(String(chatId)).update({isSubscribed: status});
 };
 
 setupPayments(bot, updateUserStep);
@@ -77,10 +77,10 @@ bot.onText(/\/start/, async (msg) => {
         reply_markup: {
             inline_keyboard: [
                 [
-                    { text: '🧠 Психология 🟣', callback_data: 'psychology' },
-                    { text: '🧘 Гимнастика 🔵', callback_data: 'gymnastics' },
+                    {text: '🧠 Психология 🟣', callback_data: 'psychology'},
+                    {text: '🧘 Гимнастика 🔵', callback_data: 'gymnastics'},
                 ],
-                [{ text: '🥗 Нутрициология 🟢', callback_data: 'nutrition' }],
+                [{text: '🥗 Нутрициология 🟢', callback_data: 'nutrition'}],
             ],
         },
     };
@@ -110,50 +110,50 @@ bot.on('callback_query', async (query) => {
                 {
                     reply_markup: {
                         inline_keyboard: [
-                            [{ text: '📲 Подписаться', url: `https://t.me/${channelUsername.replace('@', '')}` }],
-                            [{ text: '🔄 Проверить подписку', callback_data: data }]
+                            [{text: '📲 Подписаться', url: `https://t.me/${channelUsername.replace('@', '')}`}],
+                            [{text: '🔄 Проверить подписку', callback_data: data}]
                         ]
                     }
                 }
             );
         }
-    } catch (error) {
-        console.error('Ошибка при проверке подписки:', error);
+    } catch (err) {
+        console.error('Ошибка при проверке подписки:', err);
         return bot.sendMessage(chatId, '🚫 Ошибка при проверке подписки. Попробуй позже.');
     }
 
     if (data === 'want_course') {
         await updateUserStep(chatId, 'want_course');
-        return bot.sendMessage(
-            chatId,
-            `✨ *Запишись на курс!*\n\n🔹 Уникальная программа\n🔹 Обратная связь от Ксении\n🔹 Поддержка и сообщество\n\n💳 Стоимость: *39900₽*`,
-            {
-                parse_mode: 'Markdown',
-                reply_markup: {
-                    inline_keyboard: [[{ text: '💸 Оплатить курс', callback_data: 'buy_course' }]],
-                },
-            }
-        );
+        return bot.sendMessage(chatId, `✨ *Запишись на курс!*\n\n🔹 Уникальная программа\n🔹 Обратная связь\n🔹 Поддержка и материалы\n\n💳 Стоимость: *39900₽*`, {
+            parse_mode: 'Markdown',
+            reply_markup: {
+                inline_keyboard: [[{text: '💸 Оплатить курс', callback_data: 'buy_course'}]],
+            },
+        });
     }
 
-    const lessonLinks = {
-        psychology: 'https://www.youtube.com/watch?v=iLlrIi9-NfQ',
-        gymnastics: 'https://www.youtube.com/watch?v=-wqLcfcA_ig',
-        nutrition: 'https://www.youtube.com/watch?v=-e-4Kx5px_I',
-    };
-
-    const messages = {
-        psychology: '🧠 *Психология*\n\nВот видеоурок, который поможет тебе разобраться в себе и обрести внутренний баланс.',
-        gymnastics: '🧘 *Славянская гимнастика*\n\nПопробуй древние практики для здоровья и женственности.',
-        nutrition: '🥗 *Нутрициология*\n\nНаучись питаться осознанно и чувствовать себя лучше каждый день.',
-    };
-
-    const msg = `${messages[data]}\n\n👉 [Просмотреть видео](${lessonLinks[data]})`;
-
-    bot.sendMessage(chatId, msg, {
-        parse_mode: 'Markdown',
-        reply_markup: {
-            inline_keyboard: [[{ text: '📚 Хочу курс!', callback_data: 'want_course' }]],
+    const lessons = {
+        psychology: {
+            text: '🧠 *Психология*\n\nВот видеоурок, который поможет тебе разобраться в себе.',
+            link: 'https://www.youtube.com/watch?v=iLlrIi9-NfQ',
         },
-    });
+        gymnastics: {
+            text: '🧘 *Славянская гимнастика*\n\nПопробуй практики для здоровья и женственности.',
+            link: 'https://www.youtube.com/watch?v=-wqLcfcA_ig',
+        },
+        nutrition: {
+            text: '🥗 *Нутрициология*\n\nНаучись питаться осознанно и чувствовать себя лучше.',
+            link: 'https://www.youtube.com/watch?v=-e-4Kx5px_I',
+        },
+    };
+
+    const lesson = lessons[data];
+    if (lesson) {
+        await bot.sendMessage(chatId, `${lesson.text}\n\n👉 [Смотреть видео](${lesson.link})`, {
+            parse_mode: 'Markdown',
+            reply_markup: {
+                inline_keyboard: [[{text: '📚 Хочу курс!', callback_data: 'want_course'}]],
+            },
+        });
+    }
 });
