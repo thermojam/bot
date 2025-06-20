@@ -16,10 +16,7 @@ export default function setupPayments(bot, updateUserStep) {
                 start_parameter: 'pay_course',
                 currency: 'RUB',
                 prices: [
-                    {
-                        label: 'Курс',
-                        amount: 3990000, // 39900.00 руб в копейках
-                    },
+                    { label: 'Курс', amount: 3990000 },
                 ],
             };
 
@@ -32,7 +29,7 @@ export default function setupPayments(bot, updateUserStep) {
                     invoice.provider_token,
                     invoice.start_parameter,
                     invoice.currency,
-                    invoice.prices
+                    JSON.stringify(invoice.prices) // IMPORTANT: parse as JSON string
                 );
                 await updateUserStep(chatId, 'invoice_sent');
             } catch (error) {
@@ -42,12 +39,10 @@ export default function setupPayments(bot, updateUserStep) {
         }
     });
 
-    // Подтверждение перед оплатой
     bot.on('pre_checkout_query', async (query) => {
         await bot.answerPreCheckoutQuery(query.id, true);
     });
 
-    // Успешная оплата
     bot.on('successful_payment', async (msg) => {
         const chatId = msg.chat.id;
         await updateUserStep(chatId, 'successful_payment');

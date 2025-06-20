@@ -10,12 +10,12 @@ config();
 const TOKEN = process.env.TELEGRAM_TOKEN;
 const URL = process.env.RENDER_EXTERNAL_URL;
 const PORT = process.env.PORT || 3000;
-const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID;
 const CHANNEL_USERNAME = process.env.CHANNEL_USERNAME;
 
+const FIREBASE_SERVICE_KEY = JSON.parse(process.env.FIREBASE_SERVICE_KEY);
 if (!admin.apps.length) {
     admin.initializeApp({
-        credential: admin.credential.cert(process.env.FIREBASE_SERVICE_KEY)
+        credential: admin.credential.cert(FIREBASE_SERVICE_KEY),
     });
 }
 
