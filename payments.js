@@ -16,7 +16,7 @@ export default function setupPayments(bot, updateUserStep) {
                 start_parameter: 'pay_course',
                 currency: 'RUB',
                 prices: [
-                    { label: 'Курс', amount: 3990000 },
+                    { label: 'Курс', amount: 3990000 }, // 39900.00 руб
                 ],
             };
 
@@ -29,7 +29,7 @@ export default function setupPayments(bot, updateUserStep) {
                     invoice.provider_token,
                     invoice.start_parameter,
                     invoice.currency,
-                    JSON.stringify(invoice.prices) // IMPORTANT: parse as JSON string
+                    invoice.prices // ✅ без stringify
                 );
                 await updateUserStep(chatId, 'invoice_sent');
             } catch (error) {
@@ -50,3 +50,4 @@ export default function setupPayments(bot, updateUserStep) {
         await bot.sendMessage(chatId, '📦 Вот ссылка на курс: https://t.me/ksenia_kmensky');
     });
 }
+
